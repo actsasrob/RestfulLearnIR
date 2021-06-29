@@ -24,6 +24,7 @@ WaitingForIRSignal = False # True - waiting, False - not waiting
 SendIRSignalQueue = queue.LifoQueue()
 WaitingToSend = False # False - not waiting, True - waiting
 
+global ser
 #ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
 #ser.flush()
 
