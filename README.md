@@ -59,7 +59,7 @@ To capture an IR signal use an HTTP GET request. The samples below assume Restfu
 
 ```
 curl -k https://192.168.1.10:8443/
-<html><head><title>RestfulLearnIR</title></head><body>28 010A 031A 00F6 074A 00F4 B200 00F4 A9B8 01 F\0 7F 14 00 20 10 00 F1 4F 04 11 30 1F 07 F1 40 00</body></html>
+<html><head><title>RestfulLearnIR</title></head><body>28 010A 031A 00F6 074A 00F4 B200 00F4 A9B8 01 F0 7F 14 00 20 10 00 F1 4F 04 11 30 1F 07 F1 40 00</body></html>
 ```
 
 The HTML output above is the response from RestfulLearnIR with the IR signal captured in LearnIR format.
@@ -73,7 +73,7 @@ curl -k https://192.168.1.10:8443/
 To send an IR signal copy the text between the \<body>...\</body> tags and send it as follows:
 
 ```
-echo '28 010A 031A 00F6 074A 00F4 B200 00F4 A9B8 01 F0 7F 14 00 20 10 00 F1 4F 04 11 30 1F 07 F1 40 0\0' | curl -k --data-binary @- https://192.168.1.10:8443/
+echo '28 010A 031A 00F6 074A 00F4 B200 00F4 A9B8 01 F0 7F 14 00 20 10 00 F1 4F 04 11 30 1F 07 F1 40 00' | curl -k --data-binary @- https://192.168.1.10:8443/
 ```
 
 RestfulLearnIR alternates between checking for available output from the LearnIR device on the serial port, incoming GET requests, and incoming POST requests. RestfulLearnIR prioritizes handling GET requests over POST requests. 
