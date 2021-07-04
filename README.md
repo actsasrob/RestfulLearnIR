@@ -59,7 +59,7 @@ To capture an IR signal use an HTTP GET request. The samples below assume Restfu
 
 ```
 curl -k https://192.168.1.10:8443/
-<html><head><title>RestfulLearnIR</title></head><body>28 010A 031A 00F6 074A 00F4 B200 00F4 A9B8 01 F0 7F 14 00 20 10 00 F1 4F 04 11 30 1F 07 F1 40 00</body></html>
+<html><head><title>RestfulLearnIR</title></head><body>28 010A 031A 00F6 074A 00F4 B200 00F4 A9B8 01 F\0 7F 14 00 20 10 00 F1 4F 04 11 30 1F 07 F1 40 00</body></html>
 ```
 
 The HTML output above is the response from RestfulLearnIR with the IR signal captured in LearnIR format.
@@ -70,9 +70,16 @@ curl -k https://192.168.1.10:8443/
 <html><head><title>RestfulLearnIR</title></head><body>error</body></html>
 ```
 
-To send an IR signal copy the text between the <body>...</body> tags and send it as follows:
+To send an IR signal copy the text between the \<body>...\</body> tags and send it as follows:
 
 ```
-echo '28 010A 031A 00F6 074A 00F4 B200 00F4 A9B8 01 F0 7F 14 00 20 10 00 F1 4F 04 11 30 1F 07 F1 40 00' | curl -k --data-binary @- https://192.168.1.10:8443/
+echo '28 010A 031A 00F6 074A 00F4 B200 00F4 A9B8 01 F0 7F 14 00 20 10 00 F1 4F 04 11 30 1F 07 F1 40 0\0' | curl -k --data-binary @- https://192.168.1.10:8443/
 ```
 
+RestfulLearnIR alternates between checking for available output from the LearnIR device on the serial port, incoming GET requests, and incoming POST requests. RestfulLearnIR prioritizes handling GET requests over POST requests. 
+
+### GET Request Handling
+Handling for GET requests is synchronous. Once RestfulLearnIR starts to handle a GET request it will wait short amount of time for an IR signal to become available on the serial port for the LearnIR device. If an IR signal is received it is returned via HTML as detailed above. If no IR signal is received in the receive window then processing times out and an HTML payload is returned indicating an error occurred.
+ 
+### POST Request Handling
+Post requests are not handled synchronously and may not be sent to the LearnIR serial device immediately. The IR signal sent in the HTML payload is queued. The IR signal will be written to the LearnIR serial device during the next available send window. Since POST requests are not handled synchronously there is no HTML payload returned for POST requests.
