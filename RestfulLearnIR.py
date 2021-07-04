@@ -19,8 +19,6 @@ KeepRunning = True
 ReceivedIRSignal = ""
 WaitingForIRSignal = False # True - waiting, False - not waiting
 
-#SendIRSignal = ""
-
 SendIRSignalQueue = queue.LifoQueue()
 WaitingToSend = False # False - not waiting, True - waiting
 
@@ -61,7 +59,6 @@ class httpServer(BaseHTTPRequestHandler):
         logging.info("GET request,\nPath: %s\nHeaders:\n%s\n", str(self.path), str(self.headers))
         self._set_headers()
         self.wfile.write(bytes("<html><head><title>RestfulLearnIR</title></head>", "utf-8"))
-        #self.wfile.write(bytes("<p>Request: %s</p>" % self.path, "utf-8"))
         self.wfile.write(bytes("<body>", "utf-8"))
         x = 0
         while (x < 5) and (ReceivedIRSignal == ""):
@@ -71,7 +68,7 @@ class httpServer(BaseHTTPRequestHandler):
         if ReceivedIRSignal != "": 
             self.wfile.write(bytes(ReceivedIRSignal, "utf-8"))
         else:
-            self.wfile.write(bytes("error", "utf-8"))
+            self.wfile.write(bytes("timeout", "utf-8"))
         ReceivedIRSignal = ""
         ReceiveLock.release()
         self.wfile.write(bytes("</body></html>", "utf-8"))
@@ -82,13 +79,8 @@ class httpServer(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
         post_data = self.rfile.read(content_length) # <--- Gets the data itself
         logging.info("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n", str(self.path), str(self.headers), post_data.decode('utf-8'))
-        #SendIRSignal = post_data
         SendIRSignalQueue.put(post_data)
-        #sendLIR("I")
         self._set_headers()
-        #self.wfile.write("POST request for {}".format(self.path).encode('utf-8'))
-        #self.wfile.write(bytes("received post request:<br>{}".format(post_data), "utf-8"))
-    
 
     def do_PUT(self):
         self.do_POST()
@@ -113,9 +105,8 @@ def run(server_class=HTTPServer, handler_class=httpServer, port=8080, useTLS=Fal
     logging.info('Stopping httpd...\n')
 
 ### Start: thread to handle LearnIR device I/O
-def sendLIRSignal():
+def sendLIRSignal(ser):
     global SendIRSignalQueue
-    global ser
 
     tmpBytes = SendIRSignalQueue.get() + bytes(" FF ", "utf-8")
     ser.write(tmpBytes)
@@ -150,7 +141,7 @@ class handle_LearnIR_IO_thread (threading.Thread):
               elif line.startswith("I>"):
                   logging.info("LearnIR ready to receive IR signal")
                   WaitingToSend = False
-                  sendLIRSignal()
+                  sendLIRSignal(self.ser)
           elif (not SendIRSignalQueue.empty()) and (not WaitingToSend):
               logging.info("Request permission from LearnIR to send IR signal")
               WaitingToSend = True
