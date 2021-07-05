@@ -14,16 +14,19 @@ import time
 
 LIR_CMD_SIZE = 10
 
+# Main processing thread/loop continue as long as this is True
 KeepRunning = True
 
 ReceivedIRSignal = ""
 WaitingForIRSignal = False # True - waiting, False - not waiting
 
+# Queue of IR signals to send
 SendIRSignalQueue = queue.LifoQueue()
 WaitingToSend = False # False - not waiting, True - waiting
 
 ReceiveLock = threading.Lock()
 
+# Send a command to the LearnIR device
 def sendLIR(ser, command):
     tmpList = list(command[0:(LIR_CMD_SIZE - 1)])
     theLength = len(tmpList)
@@ -42,6 +45,7 @@ def sendLIR(ser, command):
     ser.write(tmpStr.encode())
     logging.debug("sendLIR: DEBUG command=" + tmpStr + " checksum=" + str(checksum) + " chr(" + str(checksum) + ")=" + str(chr(checksum)) +"\n")
 
+# Class which implements the HTTP server
 class httpServer(BaseHTTPRequestHandler):
     def _set_headers(self):
         self.send_response(200)
@@ -85,6 +89,7 @@ class httpServer(BaseHTTPRequestHandler):
     def do_PUT(self):
         self.do_POST()
 
+# # Start the web server
 def run(server_class=HTTPServer, handler_class=httpServer, port=8080, useTLS=False, cert='', key=''):
     global KeepRunning
 
@@ -104,7 +109,7 @@ def run(server_class=HTTPServer, handler_class=httpServer, port=8080, useTLS=Fal
     httpd.server_close()
     logging.info('Stopping httpd...\n')
 
-### Start: thread to handle LearnIR device I/O
+# Write IR signal to LearnIR serial device from queue. LearnIR will transmit the IR signal
 def sendLIRSignal(ser):
     global SendIRSignalQueue
 
@@ -113,12 +118,15 @@ def sendLIRSignal(ser):
     logging.debug(b"sendLIRSignal: Sent: " + tmpBytes)
 
 
+# Thread to handle main processing loop
 class handle_LearnIR_IO_thread (threading.Thread):
-   def __init__(self, threadID, name, ser):
+   def __init__(self, threadID, name, ser, uid, gid):
       threading.Thread.__init__(self)
       self.threadID = threadID
       self.name = name
       self.ser = ser
+      self.uid = uid 
+      self.gid = gid
    def run(self):
        logging.info("handle_LearnIR_IO_thread %s: starting", self.name)
        global KeepRunning
@@ -127,51 +135,70 @@ class handle_LearnIR_IO_thread (threading.Thread):
        global SendIRSignalQueue
        global WaitingToSend
 
+       import os
+       if os.getuid() == 0: # only attempt to drop permissions if running as root
+           time.sleep(2) # Allow time for web server to start and bind port
+           os.setgid(self.gid)
+           os.setuid(self.uid)
+           logging.info("Dropped permissions to: UID=%s, GID=%s", os.getuid(), os.getegid())
+       else:
+           logging.info("Not started as root. Will not attempt to drop permissions. UID=%s, GID=%s", os.getuid(), os.getegid())
+
        while KeepRunning:  # Alternate between reading/writing LearnIR serial port
           line = self.ser.readline().decode('utf-8').rstrip()
           if line != "": # read/print/process anything coming from Serial port
               logging.info("from LearnIR: " + line)
-              if line.startswith("LIR: "):
+              if line.startswith("LIR: "): # LearnIR device indicates it has received an IR signal
                   if WaitingForIRSignal: # Only keep signal if we were expecting one
                       logging.info("IR signal from LearnIR: " + line)
                       ReceiveLock.acquire()
                       ReceivedIRSignal = line[len("LIR: "):] 
                       WaitingForIRSignal = False 
                       ReceiveLock.release()
-              elif line.startswith("I>"):
+              elif line.startswith("I>"): # LearnIR device indicates it is ready to send IR signal
                   logging.info("LearnIR ready to receive IR signal")
                   WaitingToSend = False
                   sendLIRSignal(self.ser)
           elif (not SendIRSignalQueue.empty()) and (not WaitingToSend):
               logging.info("Request permission from LearnIR to send IR signal")
               WaitingToSend = True
-              sendLIR(self.ser, "I")
+              sendLIR(self.ser, "I") # Request permission from LearnIR to send IR signal
           else:
               #logging.debug("sleeping...")
               time.sleep(0.5)
-
 ### End: thread to handle LearnIR device I/O
 
 if __name__ == '__main__':
     import argparse
+    import grp
     import os
+    import pwd
     import sys
 
+    uid = os.getuid()
+    gid = os.getegid() 
+  
     parser = argparse.ArgumentParser()
     parser.add_argument("--cert", default='/etc/default/RestfulLearnIR/cert.pem', help="Path to certificate when using TLS")
     parser.add_argument("-d", "--device", default='/dev/ttyUSB0', help="LearnIR USB device ID")
-    parser.add_argument("-g", "--groupID", default='rlir', help="Process will run using this group ID")
+    parser.add_argument("-g", "--groupID", help="Process will run using this group ID")
     parser.add_argument("--key", default='/etc/default/RestfulLearnIR/key.pem', help="Path to key when using TLS")
     parser.add_argument("-p", "--port", type=int, default=8080, help="Port to bind to")
     parser.add_argument("-t", "--useTLS", help="Enable TLS connections", action="store_true")
-    parser.add_argument("-u", "--userID", default='rlir', help="Process will run using this user ID")
+    parser.add_argument("-u", "--userID", help="Process will run using this user ID")
     args = parser.parse_args()
 
     learnIRDevice=args.device
     port=args.port 
     useTLS=args.useTLS
-    groupID = args.groupID
-    userID = args.userID
+    groupID = ""
+    if args.groupID:
+        groupID = args.groupID
+        name, passwd, gid, mem = grp.getgrnam(groupID)
+    userID = ""
+    if args.userID:
+        userID = args.userID
+        _, _, uid, ngid, gecos, root, shell = pwd.getpwnam(userID) # convert user ID and group ID from string to numeric format
     cert = args.cert
     key = args.key
 
@@ -185,7 +212,10 @@ if __name__ == '__main__':
     serialPort = serial.Serial(learnIRDevice, 115200, timeout=1)
     serialPort.flush()
 
-    thread1 = handle_LearnIR_IO_thread(1, "handle_LearnIR_IO_thread", serialPort)
+    # Create/start main processing loop/thread
+    thread1 = handle_LearnIR_IO_thread(1, "handle_LearnIR_IO_thread", serialPort, uid, gid)
     thread1.start()
 
+    # Start the web server
     run(port=port, useTLS=useTLS, cert=cert, key=key)
+
