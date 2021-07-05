@@ -24,9 +24,12 @@ By passing arguments to RestfulLearnIR you can change the port the RestfulLearnI
 
 By default TLS is not enabled, but can be enabled with argument --useTLS.
 When TLS is enabled you must provide a cert/key file. The default cert location is /etc/default/RestfulLearnIR/cert.pem. This can be changed with the --cert argument. The default key location is /etc/default/RestfulLearnIR/key.pem. This can be changed with the --key argument.
+
 The default port is 8080 but can be changed with argument --port.
-If RestfulLearnIR is started as root the default process user/group is root/root and can be changed with the --userID/--groupID arguments. If the --userID/--groupID arguments are specified the process will drop permissions after the web starts.
-If RestfulLearnIR is not started as root then the effective user/group will be the same as the parent process and will not attempt to drop permissions after start.
+
+If RestfulLearnIR is started as root the default process user/group is root/root and can be changed with the --userID/--groupID arguments. If the --userID/--groupID arguments are specified the process will drop permissions to the specified user/group after the web server starts.
+
+If RestfulLearnIR is not started as root then the effective user/group will be the same as the parent process *and will not attempt to drop permissions after start*.
 
 ## restfullearnir systemd service
 
@@ -38,10 +41,10 @@ To install the systemd service:
 * Edit the RestfulLearnIR.conf file to set desired values. The variables in the conf file should be intuitive after reading the information above.
 * Execute the install script as: sudo ./installRestfulLearnIR.sh
 * If you enable TLS then copy the cert/key file to the location specified in the conf file.
-* Enable the restfullearnir service using: sudo systemctl enable restfullearnir
-* Start the restfullearnir service using: sudo systemctl start restfullearnir
-* Check the systemd service status using: sudo systemctl status restfullearnir
-* View program output using: sudo journalctl -u restfullearnir -f
+* Enable the restfullearnir service using: **sudo systemctl enable restfullearnir**
+* Start the restfullearnir service using: **sudo systemctl start restfullearnir**
+* Check the systemd service status using: **sudo systemctl status restfullearnir**
+* View program output using: **sudo journalctl -u restfullearnir -f**
 
 You can change values in the conf file and re-run the install script as needed. However when changing the user/group setting you will want to run the uninstall script before making changes to remove the old user/group. After that, update the user/group information in the conf file and run the install script again.
 
