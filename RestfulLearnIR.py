@@ -181,11 +181,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--cert", default='/etc/default/RestfulLearnIR/cert.pem', help="Path to certificate when using TLS")
     parser.add_argument("-d", "--device", default='/dev/ttyUSB0', help="LearnIR USB device ID")
-    parser.add_argument("-g", "--groupID", help="Process will run using this group ID")
+    parser.add_argument("-g", "--groupID", help="Process will drop permissions to group ID after start when started as root")
     parser.add_argument("--key", default='/etc/default/RestfulLearnIR/key.pem', help="Path to key when using TLS")
     parser.add_argument("-p", "--port", type=int, default=8080, help="Port to bind to")
     parser.add_argument("-t", "--useTLS", help="Enable TLS connections", action="store_true")
-    parser.add_argument("-u", "--userID", help="Process will run using this user ID")
+    parser.add_argument("-u", "--userID", help="Process will drop permissions to user ID after start when started as root")
     args = parser.parse_args()
 
     learnIRDevice=args.device

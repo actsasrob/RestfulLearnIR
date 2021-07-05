@@ -39,7 +39,7 @@ To install the systemd service:
 * clone this git repo
 * cd to the top-level RestfulLearnIR directory
 * Edit the RestfulLearnIR.conf file to set desired values. The variables in the conf file should be intuitive after reading the information above.
-* Execute the install script as: sudo ./installRestfulLearnIR.sh
+* Execute the install script as: **sudo ./installRestfulLearnIR.sh**
 * If you enable TLS then copy the cert/key file to the location specified in the conf file.
 * Enable the restfullearnir service using: **sudo systemctl enable restfullearnir**
 * Start the restfullearnir service using: **sudo systemctl start restfullearnir**
