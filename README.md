@@ -25,7 +25,8 @@ By passing arguments to RestfulLearnIR you can change the port the RestfulLearnI
 By default TLS is not enabled, but can be enabled with argument --useTLS.
 When TLS is enabled you must provide a cert/key file. The default cert location is /etc/default/RestfulLearnIR/cert.pem. This can be changed with the --cert argument. The default key location is /etc/default/RestfulLearnIR/key.pem. This can be changed with the --key argument.
 The default port is 8080 but can be changed with argument --port.
-The default user/group is rlir/rlir and can be changed with the --userID/--groupID arguments.
+If RestfulLearnIR is started as root the default process user/group is root/root and can be changed with the --userID/--groupID arguments. If the --userID/--groupID arguments are specified the process will drop permissions after the web starts.
+If RestfulLearnIR is not started as root then the effective user/group will be the same as the parent process and will not attempt to drop permissions after start.
 
 ## restfullearnir systemd service
 
